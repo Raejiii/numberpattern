@@ -3,19 +3,39 @@ import { Pause, Play, RotateCcw, HelpCircle, Music, VolumeX, SkipForward } from 
 import confetti from "canvas-confetti"
 import { gameConfig } from "../config/game-config"
 
+interface Point {
+  x: number
+  y: number
+}
+
+interface Stroke {
+  id: number
+  path: string
+  startPoint: Point
+  endPoint: Point
+}
+
+interface TracingItem {
+  id: number
+  character: string
+  name: string
+  difficulty: string
+  type: string
+  strokes: Stroke[]
+}
+
 export function TracingGame() {
   const [showSplash, setShowSplash] = useState(true)
   const [gameState, setGameState] = useState("start")
   const [showOverlay, setShowOverlay] = useState(true)
-  const [showSidebar, setShowSidebar] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [floatingText, setFloatingText] = useState({ text: "", show: false })
   const [isSplashFading, setIsSplashFading] = useState(false)
   const [currentItemIndex, setCurrentItemIndex] = useState(0)
-  const [currentItem, setCurrentItem] = useState(gameConfig.tracingItems[0])
+  const [currentItem, setCurrentItem] = useState<TracingItem>(gameConfig.tracingItems[0])
   const [currentStrokeIndex, setCurrentStrokeIndex] = useState(0)
-  const [tracedPaths, setTracedPaths] = useState([])
-  const [currentPath, setCurrentPath] = useState([])
+  const [tracedPaths, setTracedPaths] = useState<Point[][]>([])
+  const [currentPath, setCurrentPath] = useState<Point[]>([])
   const [isTracing, setIsTracing] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
   const [currentLevel, setCurrentLevel] = useState(1)
@@ -24,10 +44,9 @@ export function TracingGame() {
   const [filteredItems, setFilteredItems] = useState(gameConfig.tracingItems)
   const [timeLeft, setTimeLeft] = useState(120)
   const [isTimerActive, setIsTimerActive] = useState(false)
-  const [strokeProgress, setStrokeProgress] = useState(0)
-  const audioRefs = useRef({})
-  const gameAreaRef = useRef(null)
-  const svgRef = useRef(null)
+  const audioRefs = useRef<Record<string, HTMLAudioElement>>({})
+  const gameAreaRef = useRef<HTMLDivElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
 
   // Audio management
   useEffect(() => {
@@ -67,7 +86,7 @@ export function TracingGame() {
 
   // Timer management
   useEffect(() => {
-    let interval
+    let interval: NodeJS.Timeout | undefined
     if (isTimerActive && timeLeft > 0 && gameState === "playing" && !showOverlay) {
       interval = setInterval(() => {
         setTimeLeft((prev) => {
@@ -82,7 +101,9 @@ export function TracingGame() {
         })
       }, 1000)
     }
-    return () => clearInterval(interval)
+    return () => {
+      if (interval) clearInterval(interval)
+    }
   }, [isTimerActive, timeLeft, gameState, showOverlay])
 
   // Filter items by difficulty
@@ -99,7 +120,7 @@ export function TracingGame() {
     loadItem(currentItemIndex)
   }, [filteredItems, currentItemIndex])
 
-  const playAudio = (audioKey) => {
+  const playAudio = (audioKey: string) => {
     if (!isMuted && audioRefs.current[audioKey]) {
       const audio = audioRefs.current[audioKey]
       audio.currentTime = 0
@@ -116,13 +137,13 @@ export function TracingGame() {
     })
   }
 
-  const formatTime = (seconds) => {
+  const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
-  const loadItem = (itemIndex) => {
+  const loadItem = (itemIndex: number) => {
     const itemsToUse = filteredItems.length > 0 ? filteredItems : gameConfig.tracingItems
     if (!itemsToUse || !itemsToUse[itemIndex]) {
       console.error("Item not found at index:", itemIndex)
@@ -136,7 +157,6 @@ export function TracingGame() {
     setCurrentPath([])
     setIsTracing(false)
     setIsComplete(false)
-    setStrokeProgress(0)
   }
 
   const nextItem = () => {
@@ -177,7 +197,7 @@ export function TracingGame() {
     }
   }
 
-  const setDifficultyLevel = (newDifficulty) => {
+  const setDifficultyLevel = (newDifficulty: string) => {
     setDifficulty(newDifficulty)
     setCurrentItemIndex(0)
     setCurrentLevel(1)
@@ -192,7 +212,6 @@ export function TracingGame() {
   const startGame = () => {
     setGameState("playing")
     setShowOverlay(false)
-    setShowSidebar(false)
     setIsTimerActive(true)
     setTimeLeft(120)
     playAudio("uiClick")
@@ -238,17 +257,17 @@ export function TracingGame() {
   }
 
   // Get event point for both mouse and touch
-  const getEventPoint = (e) => {
-    if (e.touches && e.touches.length > 0) {
+  const getEventPoint = (e: React.MouseEvent | React.TouchEvent): Point => {
+    if ('touches' in e && e.touches && e.touches.length > 0) {
       return { x: e.touches[0].clientX, y: e.touches[0].clientY }
-    } else if (e.changedTouches && e.changedTouches.length > 0) {
+    } else if ('changedTouches' in e && e.changedTouches && e.changedTouches.length > 0) {
       return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY }
     }
-    return { x: e.clientX, y: e.clientY }
+    return { x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY }
   }
 
   // Convert screen coordinates to SVG coordinates
-  const screenToSVG = (point) => {
+  const screenToSVG = (point: Point): Point => {
     if (!svgRef.current) return { x: 0, y: 0 }
     const rect = svgRef.current.getBoundingClientRect()
     return {
@@ -258,7 +277,7 @@ export function TracingGame() {
   }
 
   // Check if point is near stroke start
-  const isNearStrokeStart = (point, stroke) => {
+  const isNearStrokeStart = (point: Point, stroke: Stroke): boolean => {
     const distance = Math.sqrt(
       Math.pow(point.x - stroke.startPoint.x, 2) + Math.pow(point.y - stroke.startPoint.y, 2)
     )
@@ -266,7 +285,7 @@ export function TracingGame() {
   }
 
   // Handle tracing start
-  const handleTracingStart = (e) => {
+  const handleTracingStart = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault()
     if (gameState !== "playing" || isComplete) return
 
@@ -288,7 +307,7 @@ export function TracingGame() {
   }
 
   // Handle tracing move
-  const handleTracingMove = (e) => {
+  const handleTracingMove = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault()
     if (!isTracing) return
 
@@ -300,13 +319,12 @@ export function TracingGame() {
     // Calculate progress along the stroke
     const currentStroke = currentItem.strokes[currentStrokeIndex]
     if (currentStroke) {
-      const progress = Math.min(currentPath.length / 50, 1) // Approximate progress
-      setStrokeProgress(progress)
+      // Visual feedback could be added here if needed
     }
   }
 
   // Handle tracing end
-  const handleTracingEnd = (e) => {
+  const handleTracingEnd = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault()
     if (!isTracing) return
 
@@ -326,7 +344,6 @@ export function TracingGame() {
         setTracedPaths((prev) => [...prev, [...currentPath, svgPoint]])
         setCurrentPath([])
         setIsTracing(false)
-        setStrokeProgress(0)
         playAudio("success")
 
         if (currentStrokeIndex + 1 >= currentItem.strokes.length) {
@@ -351,7 +368,6 @@ export function TracingGame() {
         // Stroke not completed properly
         setCurrentPath([])
         setIsTracing(false)
-        setStrokeProgress(0)
         playAudio("incorrect")
         setFloatingText({ text: "Try again!", show: true })
         setTimeout(() => {

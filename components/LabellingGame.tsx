@@ -65,7 +65,8 @@ const LabellingGame: React.FC = () => {
   const gameAreaRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
   const labelsAreaRef = useRef<HTMLDivElement>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  // Audio ref (removed as it's not used)
+  // const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // Initialize splash screen
   useEffect(() => {
@@ -183,7 +184,6 @@ const LabellingGame: React.FC = () => {
     
     if (filteredScenarios.length === 0) return
 
-    const scenario = filteredScenarios[currentScenarioIndex % filteredScenarios.length]
     setPlacedLabels({})
     setDraggedLabel(null)
   }, [gameConfig.scenarios, currentScenarioIndex, difficulty])
@@ -200,11 +200,6 @@ const LabellingGame: React.FC = () => {
       setShowOverlay(true)
     }
   }, [gameConfig.scenarios, currentScenarioIndex, difficulty])
-
-  const setDifficultyAndReset = (newDifficulty: "easy" | "medium" | "hard" | "all") => {
-    setDifficultyLevel(newDifficulty)
-    setCurrentScenarioIndex(0)
-  }
 
   const startGame = () => {
     setGameState("playing")
@@ -328,13 +323,11 @@ const LabellingGame: React.FC = () => {
     setTimeout(() => setFloatingText({ show: false, text: "" }), 3000)
   }
 
-  // Get current scenario
-  const getCurrentScenario = (): Scenario | null => {
-    const filteredScenarios = difficulty === "all" 
-      ? gameConfig.scenarios 
-      : gameConfig.scenarios.filter(s => s.difficulty === difficulty)
-    
-    return filteredScenarios[currentScenarioIndex] || null
+  const getCurrentScenario = () => {
+    const filteredScenarios = gameConfig.scenarios.filter((s: Scenario) => 
+      difficulty === "all" || s.difficulty === difficulty
+    )
+    return filteredScenarios[currentScenarioIndex] || gameConfig.scenarios[0]
   }
 
   const currentScenario = getCurrentScenario()
@@ -652,7 +645,7 @@ const LabellingGame: React.FC = () => {
                   <div className="mb-6">
                     <p className="text-sm font-semibold mb-2 text-black">Choose Difficulty:</p>
                     <div className="flex flex-wrap gap-2 justify-center">
-                      {["easy", "medium", "hard", "all"].map((diff) => (
+                      {(["easy", "medium", "hard", "all"] as const).map((diff) => (
                         <button
                           key={diff}
                           onClick={() => setDifficultyLevel(diff)}

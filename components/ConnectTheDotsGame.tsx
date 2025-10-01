@@ -3,6 +3,23 @@ import { Pause, Play, RotateCcw, HelpCircle, Music, VolumeX, SkipForward } from 
 import confetti from "canvas-confetti"
 import { gameConfig } from "../config/game-config"
 
+// Define types for better TypeScript support
+interface AudioRefs {
+  [key: string]: HTMLAudioElement;
+}
+
+interface Dot {
+  x: number;
+  y: number;
+  number: number;
+}
+
+interface Line {
+  start: { x: number; y: number };
+  end: { x: number; y: number };
+  startDot?: any;
+}
+
 export function ConnectTheDotsGame() {
   const [showSplash, setShowSplash] = useState(true)
   const [gameState, setGameState] = useState("start")
@@ -12,22 +29,21 @@ export function ConnectTheDotsGame() {
   const [floatingText, setFloatingText] = useState({ text: "", show: false })
   const [isSplashFading, setIsSplashFading] = useState(false)
   const [currentShapeIndex, setCurrentShapeIndex] = useState(0)
-  const [currentShape, setCurrentShape] = useState(gameConfig.shapes[0]) // Initialize with first shape
-  const [connectedDots, setConnectedDots] = useState([])
-  const [lines, setLines] = useState([])
-  const [currentLine, setCurrentLine] = useState(null)
+  const [currentShape, setCurrentShape] = useState(gameConfig.tracingItems[0]) // Use tracingItems instead of shapes
+  const [connectedDots, setConnectedDots] = useState<number[]>([])
+  const [lines, setLines] = useState<Line[]>([])
+  const [currentLine, setCurrentLine] = useState<Line | null>(null)
   const [nextDotNumber, setNextDotNumber] = useState(1)
   const [isShapeComplete, setIsShapeComplete] = useState(false)
   const [showShapeImage, setShowShapeImage] = useState(false)
-  const [isDrawing, setIsDrawing] = useState(false) // Fixed: removed circular reference
-  const [startDot, setStartDot] = useState(null)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [startDot, setStartDot] = useState<Dot | null>(null)
   const [currentLevel, setCurrentLevel] = useState(1)
-  const [totalLevels] = useState(gameConfig.shapes.length)
   const [difficulty, setDifficulty] = useState("all") // "easy", "medium", "hard", "all"
-  const [filteredShapes, setFilteredShapes] = useState(gameConfig.shapes)
-  const audioRefs = useRef({})
-  const gameAreaRef = useRef(null)
-  const svgRef = useRef(null)
+  const [filteredShapes, setFilteredShapes] = useState(gameConfig.tracingItems) // Use tracingItems
+  const audioRefs = useRef<AudioRefs>({})
+  const gameAreaRef = useRef<HTMLDivElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
 
   useEffect(() => {
     const fadeTimer = setTimeout(() => {
@@ -69,16 +85,16 @@ export function ConnectTheDotsGame() {
   // Update filtered shapes when difficulty changes
   useEffect(() => {
     if (difficulty === "all") {
-      setFilteredShapes(gameConfig.shapes)
+      setFilteredShapes(gameConfig.tracingItems)
     } else {
-      setFilteredShapes(gameConfig.shapes.filter((shape) => shape.difficulty === difficulty))
+      setFilteredShapes(gameConfig.tracingItems.filter((shape: any) => shape.difficulty === difficulty))
     }
   }, [difficulty])
 
-  const playAudio = (name, loop = false) => {
+  const playAudio = (name: string, loop = false) => {
     if (!isMuted) {
       if (!audioRefs.current[name]) {
-        audioRefs.current[name] = new Audio(gameConfig.audio[name])
+        audioRefs.current[name] = new Audio(gameConfig.audio[name as keyof typeof gameConfig.audio])
         audioRefs.current[name].loop = loop
       }
 
@@ -88,14 +104,14 @@ export function ConnectTheDotsGame() {
         if (name === "connect") {
           audioRefs.current[name].currentTime = 0
         }
-        audioRefs.current[name].play().catch((error) => {
+        audioRefs.current[name].play().catch((error: any) => {
           console.error(`Error playing audio ${name}:`, error)
         })
       }
     }
   }
 
-  const pauseAudio = (name) => {
+  const pauseAudio = (name: string) => {
     if (audioRefs.current[name]) {
       audioRefs.current[name].pause()
     }
@@ -131,8 +147,8 @@ export function ConnectTheDotsGame() {
     stopAllAudio()
   }
 
-  const loadShape = (shapeIndex) => {
-    const shapesToUse = filteredShapes.length > 0 ? filteredShapes : gameConfig.shapes
+  const loadShape = (shapeIndex: number) => {
+    const shapesToUse = filteredShapes.length > 0 ? filteredShapes : gameConfig.tracingItems
     if (!shapesToUse || !shapesToUse[shapeIndex]) {
       console.error("Shape not found at index:", shapeIndex)
       return
@@ -151,7 +167,7 @@ export function ConnectTheDotsGame() {
   }
 
   const nextShape = () => {
-    const shapesToUse = filteredShapes.length > 0 ? filteredShapes : gameConfig.shapes
+    const shapesToUse = filteredShapes.length > 0 ? filteredShapes : gameConfig.tracingItems
     if (!shapesToUse || !shapesToUse.length) return
 
     const nextIndex = (currentShapeIndex + 1) % shapesToUse.length
@@ -162,7 +178,7 @@ export function ConnectTheDotsGame() {
   }
 
   const autoAdvanceToNextLevel = () => {
-    const shapesToUse = filteredShapes.length > 0 ? filteredShapes : gameConfig.shapes
+    const shapesToUse = filteredShapes.length > 0 ? filteredShapes : gameConfig.tracingItems
     if (!shapesToUse || !shapesToUse.length) return
 
     // Check if there are more levels
@@ -192,7 +208,7 @@ export function ConnectTheDotsGame() {
     }
   }
 
-  const setDifficultyLevel = (newDifficulty) => {
+  const setDifficultyLevel = (newDifficulty: string) => {
     setDifficulty(newDifficulty)
     setCurrentShapeIndex(0)
     setCurrentLevel(1)
@@ -218,7 +234,7 @@ export function ConnectTheDotsGame() {
     const animationEnd = Date.now() + duration
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 }
 
-    function randomInRange(min, max) {
+    function randomInRange(min: number, max: number) {
       return Math.random() * (max - min) + min
     }
 
@@ -240,7 +256,7 @@ export function ConnectTheDotsGame() {
     }, 250)
   }
 
-  const getDotPosition = (dot) => {
+  const getDotPosition = (dot: any) => {
     if (!gameAreaRef.current) return { x: 0, y: 0 }
     const rect = gameAreaRef.current.getBoundingClientRect()
     return {
@@ -249,7 +265,7 @@ export function ConnectTheDotsGame() {
     }
   }
 
-  const getEventPoint = (e) => {
+  const getEventPoint = (e: any) => {
     if (e.touches && e.touches.length > 0) {
       return { x: e.touches[0].clientX, y: e.touches[0].clientY }
     } else if (e.changedTouches && e.changedTouches.length > 0) {
@@ -258,19 +274,27 @@ export function ConnectTheDotsGame() {
     return { x: e.clientX, y: e.clientY }
   }
 
-  const getTouchedDot = (point) => {
+  const getTouchedDot = (point: any) => {
     if (!gameAreaRef.current || !currentShape) return null
     const rect = gameAreaRef.current.getBoundingClientRect()
     const relativeX = ((point.x - rect.left) / rect.width) * 100
     const relativeY = ((point.y - rect.top) / rect.height) * 100
 
-    return currentShape.dots.find((dot) => {
+    // Generate dots from strokes
+    const dots = currentShape.strokes
+      .flatMap((stroke: any) => [stroke.startPoint, stroke.endPoint])
+      .filter((dot: any, index: number, array: any[]) => {
+        return index === array.findIndex((d: any) => d.x === dot.x && d.y === dot.y)
+      })
+      .map((dot: any, index: number) => ({ ...dot, number: index + 1 }))
+
+    return dots.find((dot: any) => {
       const distance = Math.sqrt(Math.pow(dot.x - relativeX, 2) + Math.pow(dot.y - relativeY, 2))
       return distance < 8 // 8% tolerance for touch
     })
   }
 
-  const handleDotClick = (dot) => {
+  const handleDotClick = (dot: any) => {
     // This function is now only used for direct clicks, not drag operations
     if (gameState !== "playing" || isShapeComplete || !currentShape) return
 
@@ -284,7 +308,7 @@ export function ConnectTheDotsGame() {
     }
   }
 
-  const handleInteractionStart = (e) => {
+  const handleInteractionStart = (e: any) => {
     e.preventDefault()
     if (gameState !== "playing" || isShapeComplete) return
 
@@ -308,7 +332,7 @@ export function ConnectTheDotsGame() {
     }
   }
 
-  const handleInteractionMove = (e) => {
+  const handleInteractionMove = (e: any) => {
     e.preventDefault()
     if (!isDrawing || !svgRef.current) return
 
@@ -324,7 +348,12 @@ export function ConnectTheDotsGame() {
 
     // Check if we're hovering over the next dot
     const hoveredDot = getTouchedDot(point)
-    const expectedNext = nextDotNumber === currentShape.dots.length ? 1 : nextDotNumber + 1
+    const totalDots = currentShape.strokes
+      .flatMap((stroke: any) => [stroke.startPoint, stroke.endPoint])
+      .filter((dot: any, index: number, array: any[]) => {
+        return index === array.findIndex((d: any) => d.x === dot.x && d.y === dot.y)
+      }).length
+    const expectedNext = nextDotNumber === totalDots ? 1 : nextDotNumber + 1
 
     // If we're hovering over the correct next dot, automatically connect to it
     if (hoveredDot && hoveredDot.number === expectedNext && hoveredDot !== startDot) {
@@ -333,12 +362,12 @@ export function ConnectTheDotsGame() {
 
       // Add the completed line
       setLines((prev) => [...prev, { start: startPosition, end: endPosition }])
-      setConnectedDots((prev) => [...prev, startDot.number])
+      setConnectedDots((prev) => [...prev, startDot?.number || 0])
 
       // Play connect sound only once when a connection is made
       playAudio("connect")
 
-      if (hoveredDot.number === 1 && nextDotNumber === currentShape.dots.length) {
+      if (hoveredDot.number === 1 && nextDotNumber === totalDots) {
         // Shape completed (connected back to start)
         setConnectedDots((prev) => [...prev, hoveredDot.number])
         setIsShapeComplete(true)
@@ -378,7 +407,7 @@ export function ConnectTheDotsGame() {
     }
   }
 
-  const handleInteractionEnd = (e) => {
+  const handleInteractionEnd = (e: any) => {
     e.preventDefault()
     if (!currentLine || !isDrawing) return
 
@@ -387,7 +416,12 @@ export function ConnectTheDotsGame() {
 
     if (endDot && endDot !== startDot) {
       // Check if this is the correct next dot
-      const expectedNext = nextDotNumber === currentShape.dots.length ? 1 : nextDotNumber + 1
+      const totalDots = currentShape.strokes
+        .flatMap((stroke: any) => [stroke.startPoint, stroke.endPoint])
+        .filter((dot: any, index: number, array: any[]) => {
+          return index === array.findIndex((d: any) => d.x === dot.x && d.y === dot.y)
+        }).length
+      const expectedNext = nextDotNumber === totalDots ? 1 : nextDotNumber + 1
 
       if (endDot.number === expectedNext) {
         // Correct connection!
@@ -395,12 +429,12 @@ export function ConnectTheDotsGame() {
         const endPosition = getDotPosition(endDot)
 
         setLines((prev) => [...prev, { start: startPosition, end: endPosition }])
-        setConnectedDots((prev) => [...prev, startDot.number])
+        setConnectedDots((prev) => [...prev, startDot?.number || 0])
 
         // Play connect sound only once when a connection is made
         playAudio("connect")
 
-        if (endDot.number === 1 && nextDotNumber === currentShape.dots.length) {
+        if (endDot.number === 1 && nextDotNumber === totalDots) {
           // Shape completed (connected back to start)
           setConnectedDots((prev) => [...prev, endDot.number])
           setIsShapeComplete(true)
@@ -440,7 +474,7 @@ export function ConnectTheDotsGame() {
       } else {
         // Wrong connection
         playAudio("incorrect")
-        const expectedNext = nextDotNumber === currentShape.dots.length ? 1 : nextDotNumber + 1
+        const expectedNext = nextDotNumber === totalDots ? 1 : nextDotNumber + 1
         setFloatingText({ text: `Connect to dot ${expectedNext}!`, show: true })
         setTimeout(() => {
           setFloatingText({ text: "", show: false })
@@ -542,10 +576,10 @@ export function ConnectTheDotsGame() {
           </div>
           <p className="text-sm sm:text-base text-black/80 text-center mt-1">
             {isDrawing
-              ? `Drag to dot ${nextDotNumber === currentShape.dots.length ? 1 : nextDotNumber + 1}...`
-              : nextDotNumber > currentShape.dots.length
+              ? `Drag to dot ${nextDotNumber === currentShape.strokes.flatMap((stroke: any) => [stroke.startPoint, stroke.endPoint]).filter((dot: any, index: number, array: any[]) => index === array.findIndex((d: any) => d.x === dot.x && d.y === dot.y)).length ? 1 : nextDotNumber + 1}...`
+              : nextDotNumber > currentShape.strokes.flatMap((stroke: any) => [stroke.startPoint, stroke.endPoint]).filter((dot: any, index: number, array: any[]) => index === array.findIndex((d: any) => d.x === dot.x && d.y === dot.y)).length
                 ? "Connect back to dot 1 to finish!"
-                : `Drag from dot ${nextDotNumber} to ${nextDotNumber === currentShape.dots.length ? 1 : nextDotNumber + 1}`}
+                : `Drag from dot ${nextDotNumber} to ${nextDotNumber === currentShape.strokes.flatMap((stroke: any) => [stroke.startPoint, stroke.endPoint]).filter((dot: any, index: number, array: any[]) => index === array.findIndex((d: any) => d.x === dot.x && d.y === dot.y)).length ? 1 : nextDotNumber + 1}`}
           </p>
         </div>
 
@@ -561,8 +595,8 @@ export function ConnectTheDotsGame() {
           onTouchMove={handleInteractionMove}
           onTouchEnd={handleInteractionEnd}
         >
-          {/* Shape Image (shown when completed) */}
-          {showShapeImage && currentShape.image && (
+          {/* Shape Image (shown when completed) - removed since tracingItems don't have images */}
+          {/* {showShapeImage && currentShape.image && (
             <div className="absolute inset-0 w-full h-full z-20 pointer-events-none animate-reveal-shape">
               <img
                 src={currentShape.image || "/placeholder.svg"}
@@ -570,37 +604,38 @@ export function ConnectTheDotsGame() {
                 className="w-full h-full object-contain"
               />
             </div>
-          )}
+          )} */}
 
-          {/* Dots */}
+          {/* Dots - Generate dots from strokes */}
           {!showShapeImage &&
-            currentShape.dots
-              .filter((dot, index, array) => {
-                // Remove duplicate dots (like the closing dot that returns to start)
-                return index === array.findIndex((d) => d.x === dot.x && d.y === dot.y)
+            currentShape.strokes
+              .flatMap((stroke: any) => [stroke.startPoint, stroke.endPoint])
+              .filter((dot: any, index: number, array: any[]) => {
+                // Remove duplicate dots
+                return index === array.findIndex((d: any) => d.x === dot.x && d.y === dot.y)
               })
-              .map((dot, index) => (
+              .map((dot: any, index: number) => (
                 <div
                   key={index}
                   className={`absolute w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-lg sm:text-xl font-bold transition-all duration-300 transform pointer-events-none ${
-                    connectedDots.includes(dot.number)
+                    connectedDots.includes(index + 1)
                       ? "bg-green-500 text-white shadow-lg scale-110"
-                      : dot.number === nextDotNumber && !isDrawing
+                      : (index + 1) === nextDotNumber && !isDrawing
                         ? "bg-yellow-400 text-black shadow-lg animate-pulse"
-                        : isDrawing && startDot?.number === dot.number
+                        : isDrawing && startDot?.number === (index + 1)
                           ? "bg-blue-500 text-white shadow-lg scale-110"
                           : "bg-white text-black shadow-md"
                   } ${showShapeImage ? "z-30" : "z-20"}`}
                   style={{
                     left: `${dot.x}%`,
                     top: `${dot.y}%`,
-                    transform: `translate(-50%, -50%) ${connectedDots.includes(dot.number) || dot.number === nextDotNumber ? "scale(1.1)" : "scale(1)"}`,
+                    transform: `translate(-50%, -50%) ${connectedDots.includes(index + 1) || (index + 1) === nextDotNumber ? "scale(1.1)" : "scale(1)"}`,
                     touchAction: "none",
                   }}
-                  aria-label={`Dot number ${dot.number}`}
-                  onClick={() => handleDotClick(dot)}
+                  aria-label={`Dot number ${index + 1}`}
+                  onClick={() => handleDotClick({ ...dot, number: index + 1 })}
                 >
-                  {dot.number}
+                  {index + 1}
                 </div>
               ))}
 

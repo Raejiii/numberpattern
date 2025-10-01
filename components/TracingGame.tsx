@@ -182,8 +182,6 @@ export function TracingGame() {
   const startGame = () => {
     setGameState("playing")
     setShowOverlay(false)
-    setIsTimerActive(true)
-    setTimeLeft(120)
     playAudio("uiClick")
     playAudio("start")
   }

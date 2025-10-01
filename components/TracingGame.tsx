@@ -42,8 +42,6 @@ export function TracingGame() {
   const [totalLevels] = useState(gameConfig.tracingItems.length)
   const [difficulty, setDifficulty] = useState("all")
   const [filteredItems, setFilteredItems] = useState(gameConfig.tracingItems)
-  const [timeLeft, setTimeLeft] = useState(120)
-  const [isTimerActive, setIsTimerActive] = useState(false)
   const audioRefs = useRef<Record<string, HTMLAudioElement>>({})
   const gameAreaRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -84,28 +82,6 @@ export function TracingGame() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Timer management
-  useEffect(() => {
-    let interval: NodeJS.Timeout | undefined
-    if (isTimerActive && timeLeft > 0 && gameState === "playing" && !showOverlay) {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            setGameState("timeUp")
-            setShowOverlay(true)
-            setIsTimerActive(false)
-            playAudio("incorrect")
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    }
-    return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [isTimerActive, timeLeft, gameState, showOverlay])
-
   // Filter items by difficulty
   useEffect(() => {
     if (difficulty === "all") {
@@ -135,12 +111,6 @@ export function TracingGame() {
       origin: { y: 0.6 },
       colors: ["#ff6b6b", "#4ecdc4", "#45b7d1", "#96ceb4", "#ffeaa7"],
     })
-  }
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
   const loadItem = (itemIndex: number) => {
@@ -454,21 +424,6 @@ export function TracingGame() {
                 : `TRACE THE ${currentItem.type.toUpperCase()} "${currentItem.character}" (${currentStrokeIndex + 1}/${currentItem.strokes.length})`}
             </p>
           </div>
-          
-          {/* Timer Component */}
-          {!isComplete && gameState === "playing" && !showOverlay && (
-            <div className="flex items-center justify-center mt-2 sm:mt-3">
-              <div className={`px-3 sm:px-4 py-1 sm:py-2 rounded-lg font-bold text-sm sm:text-lg ${
-                timeLeft <= 30 
-                  ? 'bg-red-500/80 text-white animate-pulse' 
-                  : timeLeft <= 60 
-                    ? 'bg-yellow-500/80 text-black' 
-                    : 'bg-green-500/80 text-white'
-              } backdrop-blur-sm shadow-lg`}>
-                ⏱️ {formatTime(timeLeft)}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Main Game Area */}

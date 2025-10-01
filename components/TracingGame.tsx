@@ -190,22 +190,18 @@ export function TracingGame() {
     loadItem(currentItemIndex)
     setGameState("playing")
     setShowOverlay(false)
-    setIsTimerActive(true)
-    setTimeLeft(120)
     playAudio("uiClick")
   }
 
   const pauseGame = () => {
     setGameState("paused")
     setShowOverlay(true)
-    setIsTimerActive(false)
     playAudio("uiClick")
   }
 
   const resumeGame = () => {
     setGameState("playing")
     setShowOverlay(false)
-    setIsTimerActive(true)
     playAudio("uiClick")
   }
 
@@ -657,19 +653,6 @@ export function TracingGame() {
                     className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                   >
                     Got it!
-                  </button>
-                </>
-              )}
-
-              {gameState === "timeUp" && (
-                <>
-                  <h2 className="text-xl sm:text-2xl font-bold mb-4">Time's Up!</h2>
-                  <p className="mb-4">Don't worry, try again!</p>
-                  <button
-                    onClick={resetGame}
-                    className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                  >
-                    Try Again
                   </button>
                 </>
               )}

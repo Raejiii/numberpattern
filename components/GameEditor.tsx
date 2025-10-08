@@ -1,202 +1,375 @@
-import { useState } from "react"
-import { ArrowLeft } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { Save, RotateCcw, Eye, Upload, ArrowLeft } from "lucide-react"
 import { Link } from "react-router-dom"
 import { gameConfig } from "../config/game-config"
 
-interface TracingItem {
-  id: number
-  character: string
-  name: string
-  difficulty: string
-  type: string
-  strokes: Array<{
-    id: number
-    path: string
-    startPoint: { x: number; y: number }
-    endPoint: { x: number; y: number }
-  }>
-}
-
 export function GameEditor() {
-  const [selectedItem, setSelectedItem] = useState(0)
-  const [currentItem, setCurrentItem] = useState<TracingItem>(gameConfig.tracingItems[0])
+  const [selectedScenario, setSelectedScenario] = useState(0)
+  const [currentScenario, setCurrentScenario] = useState(gameConfig.scenarios[0])
+  const [isDragging, setIsDragging] = useState(false)
+  const [draggedItem, setDraggedItem] = useState<string | null>(null)
+  const [dragType, setDragType] = useState<'dropzone' | 'target' | null>(null)
+  const [hasChanges, setHasChanges] = useState(false)
+  const gameAreaRef = useRef<HTMLDivElement>(null)
 
-  const handleItemChange = (index: number) => {
-    setSelectedItem(index)
-    setCurrentItem(gameConfig.tracingItems[index])
+  useEffect(() => {
+    setCurrentScenario(gameConfig.scenarios[selectedScenario])
+  }, [selectedScenario])
+
+  const handleScenarioChange = (index: number) => {
+    if (hasChanges) {
+      const confirm = window.confirm("You have unsaved changes. Are you sure you want to switch scenarios?")
+      if (!confirm) return
+    }
+    setSelectedScenario(index)
+    setHasChanges(false)
   }
 
+  const getEventPoint = (e: React.MouseEvent | React.TouchEvent) => {
+    if ('touches' in e && e.touches && e.touches.length > 0) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    }
+    return { x: (e as React.MouseEvent).clientX, y: (e as React.MouseEvent).clientY }
+  }
+
+  const handleMouseDown = (e: React.MouseEvent | React.TouchEvent, itemId: string, type: 'dropzone' | 'target') => {
+    e.preventDefault()
+    setIsDragging(true)
+    setDraggedItem(itemId)
+    setDragType(type)
+  }
+
+  const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDragging || !draggedItem || !gameAreaRef.current) return
+
+    e.preventDefault()
+    const point = getEventPoint(e)
+    const gameRect = gameAreaRef.current.getBoundingClientRect()
+
+    const relativeX = ((point.x - gameRect.left) / gameRect.width) * 100
+    const relativeY = ((point.y - gameRect.top) / gameRect.height) * 100
+
+    // Clamp values between 0 and 100
+    const clampedX = Math.max(0, Math.min(100, relativeX))
+    const clampedY = Math.max(0, Math.min(100, relativeY))
+
+    // Update the scenario data
+    const updatedPositions = currentScenario.labelPositions.map((position: any) => {
+      if (position.id === draggedItem) {
+        if (dragType === "dropzone") {
+          return { ...position, x: clampedX, y: clampedY }
+        } else if (dragType === "target") {
+          return { ...position, targetX: clampedX, targetY: clampedY }
+        }
+      }
+      return position
+    })
+
+    setCurrentScenario({
+      ...currentScenario,
+      labelPositions: updatedPositions,
+    })
+    setHasChanges(true)
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+    setDraggedItem(null)
+    setDragType(null)
+  }
+
+
+
+  const saveToConfigFile = async () => {
+    try {
+      // Create updated config
+      const updatedConfig = {
+        ...gameConfig,
+        scenarios: gameConfig.scenarios.map((scenario, index) =>
+          index === selectedScenario ? currentScenario : scenario,
+        ),
+      }
+
+      // Generate the TypeScript config file content
+      const configContent = `export const gameConfig = ${JSON.stringify(updatedConfig, null, 2)}`
+
+      // Create and download the file
+      const dataBlob = new Blob([configContent], { type: "text/typescript" })
+      const url = URL.createObjectURL(dataBlob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = "game-config.ts"
+      link.click()
+      URL.revokeObjectURL(url)
+
+      setHasChanges(false)
+      alert("Configuration saved as game-config.ts! Replace your existing config file with this one.")
+    } catch (error) {
+      console.error("Error saving configuration:", error)
+      alert("Error saving configuration. Please try again.")
+    }
+  }
+
+  const loadConfigFromFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e: ProgressEvent<FileReader>) => {
+      try {
+        const content = e.target?.result as string
+        let config: any
+
+        // Try to parse as JSON first
+        try {
+          config = JSON.parse(content)
+        } catch {
+          // If JSON parsing fails, try to extract from TypeScript export
+          const match = content.match(/export const gameConfig = ({[\s\S]*})/)
+          if (match) {
+            config = JSON.parse(match[1])
+          } else {
+            throw new Error("Invalid file format")
+          }
+        }
+
+        if (config && config.scenarios) {
+          // Update the current scenario with loaded data
+          const loadedScenario = config.scenarios[selectedScenario]
+          if (loadedScenario) {
+            setCurrentScenario(loadedScenario)
+            setHasChanges(true)
+            alert("Configuration loaded successfully!")
+          } else {
+            alert("Selected scenario not found in loaded configuration.")
+          }
+        } else {
+          alert("Invalid configuration file format.")
+        }
+      } catch (error) {
+        console.error("Error loading configuration:", error)
+        alert("Error loading configuration file. Please check the file format.")
+      }
+    }
+    reader.readAsText(file)
+
+    // Reset the input
+    event.target.value = ""
+  }
+
+  const copyCoordinatesToClipboard = async () => {
+    const coordinates = currentScenario.labelPositions.map((pos: any) => ({
+      id: pos.id,
+      label: pos.label,
+      x: Math.round(pos.x * 10) / 10,
+      y: Math.round(pos.y * 10) / 10,
+      targetX: Math.round(pos.targetX * 10) / 10,
+      targetY: Math.round(pos.targetY * 10) / 10,
+    }))
+
+    const coordinatesText = JSON.stringify(coordinates, null, 2)
+
+    try {
+      await navigator.clipboard.writeText(coordinatesText)
+      alert("Coordinates copied to clipboard!")
+    } catch (error) {
+      console.error("Error copying to clipboard:", error)
+      // Fallback: show in console and alert
+      console.log("Coordinates:", coordinatesText)
+      alert("Coordinates logged to console. Check browser developer tools.")
+    }
+  }
+
+  const resetScenario = () => {
+    const confirm = window.confirm("Are you sure you want to reset this scenario to its original state?")
+    if (confirm) {
+      setCurrentScenario(gameConfig.scenarios[selectedScenario])
+      setHasChanges(false)
+    }
+  }
+
+
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen bg-gray-100 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link
-                to="/"
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-3xl font-bold text-black">Game Configuration Editor</h1>
+            <Link
+              to="/"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-black rounded-md hover:bg-gray-600 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Game
+            </Link>
+          </div>
+
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <label className="font-medium text-black">Scenario:</label>
+              <select
+                value={selectedScenario}
+                onChange={(e) => handleScenarioChange(Number.parseInt(e.target.value))}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Game
-              </Link>
-              <h1 className="text-2xl font-bold text-gray-800">Tracing Game Editor</h1>
+                {gameConfig.scenarios.map((scenario, index) => (
+                  <option key={index} value={index}>
+                    {scenario.name} ({scenario.difficulty})
+                  </option>
+                ))}
+              </select>
             </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={saveToConfigFile}
+                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-black rounded-md hover:bg-green-600 transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                Save Config
+              </button>
+
+              <label className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-black rounded-md hover:bg-blue-600 transition-colors cursor-pointer">
+                <Upload className="w-4 h-4" />
+                Load Config
+                <input type="file" accept=".json,.ts" onChange={loadConfigFromFile} className="hidden" />
+              </label>
+
+              <button
+                onClick={copyCoordinatesToClipboard}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-black rounded-md hover:bg-purple-600 transition-colors"
+              >
+                <Eye className="w-4 h-4" />
+                Copy Coords
+              </button>
+
+              <button
+                onClick={resetScenario}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-black rounded-md hover:bg-red-600 transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reset
+              </button>
+            </div>
+
+            {hasChanges && <div className="text-orange-600 font-medium">⚠️ Unsaved changes</div>}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Item Selection Panel */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800">Tracing Items</h2>
-            <div className="space-y-2">
-              {gameConfig.tracingItems.map((item, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleItemChange(index)}
-                  className={`w-full p-3 text-left rounded-lg transition-colors ${
-                    selectedItem === index
-                      ? "bg-blue-100 border-2 border-blue-500"
-                      : "bg-gray-50 hover:bg-gray-100 border-2 border-transparent"
-                  }`}
-                >
-                  <div className="font-medium">{item.character} - {item.name}</div>
-                  <div className="text-sm text-gray-600">
-                    {item.difficulty} • {item.type} • {item.strokes.length} strokes
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* Editor Area */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-bold text-black mb-4">Editing: {currentScenario.name}</h2>
 
-          {/* Item Details Panel */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800">Item Details</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Character</label>
-                <div className="text-4xl font-bold text-center py-4 bg-gray-50 rounded-lg">
-                  {currentItem.character}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Game Preview */}
+            <div className="lg:col-span-3">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-medium text-black mb-3">Game Preview</h3>
+                <div
+                  ref={gameAreaRef}
+                  className="relative w-full aspect-square max-w-2xl mx-auto bg-white rounded-lg shadow-inner cursor-crosshair"
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onTouchMove={handleMouseMove}
+                  onTouchEnd={handleMouseUp}
+                  style={{ touchAction: "none" }}
+                >
+                  {/* Background Image */}
+                  <img
+                    src={currentScenario.image || "/placeholder.svg"}
+                    alt={currentScenario.title}
+                    className="w-full h-full object-contain rounded-lg"
+                    draggable={false}
+                  />
+
+                  {/* Lines */}
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                    {currentScenario.labelPositions.map((position) => (
+                      <line
+                        key={`line-${position.id}`}
+                        x1={`${position.x}%`}
+                        y1={`${position.y}%`}
+                        x2={`${position.targetX}%`}
+                        y2={`${position.targetY}%`}
+                        stroke="#10b981"
+                        strokeWidth="2"
+                        strokeDasharray="5,5"
+                        className="transition-all duration-200"
+                      />
+                    ))}
+                  </svg>
+
+                  {/* Drop Zones */}
+                  {currentScenario.labelPositions.map((position) => (
+                    <div
+                      key={`dropzone-${position.id}`}
+                      className="absolute w-20 h-8 rounded border-2 border-dashed border-blue-500 bg-blue-100/50 cursor-move hover:bg-blue-200/50 transition-colors flex items-center justify-center"
+                      style={{
+                        left: `${position.x}%`,
+                        top: `${position.y}%`,
+                        transform: "translate(-50%, -50%)",
+                      }}
+                      onMouseDown={(e) => handleMouseDown(e, position.id, "dropzone")}
+                      onTouchStart={(e) => handleMouseDown(e, position.id, "dropzone")}
+                    >
+                      <span className="text-xs font-bold text-blue-700 pointer-events-none">{position.label}</span>
+                    </div>
+                  ))}
+
+                  {/* Target Points */}
+                  {currentScenario.labelPositions.map((position) => (
+                    <div
+                      key={`target-${position.id}`}
+                      className="absolute w-4 h-4 rounded-full bg-green-500 border-2 border-white cursor-move hover:bg-green-600 transition-colors shadow-lg"
+                      style={{
+                        left: `${position.targetX}%`,
+                        top: `${position.targetY}%`,
+                        transform: "translate(-50%, -50%)",
+                      }}
+                      onMouseDown={(e) => handleMouseDown(e, position.id, "target")}
+                      onTouchStart={(e) => handleMouseDown(e, position.id, "target")}
+                      title={`Target for ${position.label}`}
+                    />
+                  ))}
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <div className="p-2 bg-gray-50 rounded-lg">{currentItem.name}</div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Difficulty</label>
-                <div className="p-2 bg-gray-50 rounded-lg capitalize">{currentItem.difficulty}</div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <div className="p-2 bg-gray-50 rounded-lg capitalize">{currentItem.type}</div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Strokes</label>
-                <div className="p-2 bg-gray-50 rounded-lg">{currentItem.strokes.length} stroke(s)</div>
-              </div>
             </div>
-          </div>
 
-          {/* Preview Panel */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800">Preview</h2>
-            <div className="aspect-square bg-gray-50 rounded-lg p-4">
-              <svg
-                viewBox="0 0 300 300"
-                className="w-full h-full"
-                style={{ maxWidth: "300px", maxHeight: "300px" }}
-              >
-                {/* Background character */}
-                <text
-                  x="150"
-                  y="200"
-                  fontSize="180"
-                  textAnchor="middle"
-                  fill="rgba(0, 0, 0, 0.1)"
-                  fontFamily="Arial, sans-serif"
-                  fontWeight="bold"
-                >
-                  {currentItem.character}
-                </text>
-                
-                {/* Stroke paths */}
-                {currentItem.strokes.map((stroke, index) => (
-                  <g key={stroke.id}>
-                    {/* Guide path */}
-                    <path
-                      d={stroke.path}
-                      fill="none"
-                      stroke="#3b82f6"
-                      strokeWidth="3"
-                      strokeDasharray="5,5"
-                      opacity="0.7"
-                    />
-                    
-                    {/* Start point */}
-                    <circle
-                      cx={stroke.startPoint.x}
-                      cy={stroke.startPoint.y}
-                      r="6"
-                      fill="#10b981"
-                      className="animate-pulse"
-                    />
-                    
-                    {/* End point */}
-                    <circle
-                      cx={stroke.endPoint.x}
-                      cy={stroke.endPoint.y}
-                      r="6"
-                      fill="#ef4444"
-                    />
-                    
-                    {/* Stroke number */}
-                    <text
-                      x={stroke.startPoint.x}
-                      y={stroke.startPoint.y - 10}
-                      fontSize="12"
-                      textAnchor="middle"
-                      fill="#374151"
-                      fontWeight="bold"
-                    >
-                      {index + 1}
-                    </text>
-                  </g>
-                ))}
-              </svg>
-            </div>
-            <div className="mt-4 text-sm text-gray-600">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                Start points
+            {/* Controls Panel */}
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-medium text-black mb-3">Instructions</h3>
+                <div className="text-sm text-black space-y-2">
+                  <p>
+                    <strong>Blue rectangles:</strong> Drop zones (drag to move)
+                  </p>
+                  <p>
+                    <strong>Green circles:</strong> Target points (drag to move)
+                  </p>
+                  <p>
+                    <strong>Green dashed lines:</strong> Connect drop zones to targets
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                End points
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-0.5 bg-blue-500" style={{ borderStyle: "dashed" }}></div>
-                Tracing path
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Info Panel */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">Game Configuration</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Game Title</label>
-              <div className="p-2 bg-gray-50 rounded-lg">{gameConfig.gameTitle}</div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Total Items</label>
-              <div className="p-2 bg-gray-50 rounded-lg">{gameConfig.tracingItems.length}</div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Instructions</label>
-              <div className="p-2 bg-gray-50 rounded-lg">{gameConfig.instructions}</div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-medium text-black mb-3">Current Coordinates</h3>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {currentScenario.labelPositions.map((position) => (
+                    <div key={position.id} className="text-xs bg-white p-2 rounded border">
+                      <div className="font-bold text-black">{position.label}</div>
+                      <div className="text-black">
+                        Drop: ({position.x.toFixed(1)}%, {position.y.toFixed(1)}%)
+                      </div>
+                      <div className="text-gray-600">
+                        Target: ({position.targetX.toFixed(1)}%, {position.targetY.toFixed(1)}%)
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 export const gameConfig = {
-  gameTitle: "Tracing Game",
-  instructions: "Trace the numbers and letters by following the dotted lines!",
+  gameTitle: "Labelling Game",
+  instructions: "Drag the correct labels to their matching positions on the image!",
   audio: {
     background:
       "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2-cherry-cute-bgm-271158-zIouDJ4FGUOTEpIXP10RZWnp9zff4A.mp3",
@@ -20,228 +20,82 @@ export const gameConfig = {
     logo: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/5(1)-73vfqVPWLBqxMGlVT7qGgN1NjIs7K8.png",
     duration: 2000,
   },
-  tracingItems: [
-    // Numbers 0-9
+  scenarios: [
     {
       id: 1,
-      character: "0",
-      name: "Number Zero",
+      name: "Bee Body Parts",
       difficulty: "easy",
-      type: "number",
-      strokes: [
-        {
-          id: 1,
-          path: "M 30 20 Q 50 10, 70 20 Q 80 50, 70 80 Q 50 90, 30 80 Q 20 50, 30 20",
-          startPoint: { x: 30, y: 20 },
-          endPoint: { x: 30, y: 20 }
-        }
-      ]
+      title: "Bee Body Parts",
+      image: "/simple-bee-anatomy-clean.jpg",
+      labelPositions: [
+        { id: "antenna", x: 36.5, y: 15, label: "ANTENNA", targetX: 18.7, targetY: 26.6 },
+        { id: "leg", x: 15, y: 55, label: "LEG", targetX: 30, targetY: 57.9 },
+        { id: "sting", x: 15, y: 80, label: "STING", targetX: 81, targetY: 76.8 },
+        { id: "wing", x: 85.3, y: 12.1, label: "WING", targetX: 68.2, targetY: 36.2 },
+        { id: "abdomen", x: 75, y: 80, label: "ABDOMEN", targetX: 68, targetY: 62 },
+      ],
+      labels: ["ANTENNA", "LEG", "STING", "WING", "ABDOMEN"],
     },
     {
       id: 2,
-      character: "1",
-      name: "Number One",
+      name: "Human Body",
       difficulty: "easy",
-      type: "number",
-      strokes: [
-        {
-          id: 1,
-          path: "M 40 20 L 50 10 L 50 90",
-          startPoint: { x: 40, y: 20 },
-          endPoint: { x: 50, y: 90 }
-        }
-      ]
+      title: "Human Body Parts",
+      image: "/simple-human-body-clean.jpg",
+      labelPositions: [
+        { id: "head", x: 20, y: 15, label: "HEAD", targetX: 50, targetY: 15 },
+        { id: "arm", x: 10, y: 35, label: "ARM", targetX: 39.1, targetY: 39 },
+        { id: "chest", x: 80, y: 35, label: "CHEST", targetX: 48.4, targetY: 28.4 },
+        { id: "hand", x: 5, y: 50, label: "HAND", targetX: 36.7, targetY: 50.9 },
+        { id: "leg", x: 80, y: 70, label: "LEG", targetX: 45, targetY: 70 },
+        { id: "foot", x: 80, y: 90, label: "FOOT", targetX: 45, targetY: 90 },
+      ],
+      labels: ["HEAD", "ARM", "CHEST", "HAND", "LEG", "FOOT"],
     },
     {
       id: 3,
-      character: "2",
-      name: "Number Two",
-      difficulty: "easy",
-      type: "number",
-      strokes: [
-        {
-          id: 1,
-          path: "M 20 30 Q 20 10, 40 10 Q 80 10, 80 40 Q 80 60, 20 90 L 80 90",
-          startPoint: { x: 20, y: 30 },
-          endPoint: { x: 80, y: 90 }
-        }
-      ]
+      name: "Plant Parts",
+      difficulty: "medium",
+      title: "Parts of a Plant",
+      image: "/simple-plant-clean.jpg",
+      labelPositions: [
+        { id: "flower", x: 20, y: 10, label: "FLOWER", targetX: 50, targetY: 10 },
+        { id: "leaf", x: 10, y: 25, label: "LEAF", targetX: 30, targetY: 25 },
+        { id: "stem", x: 80, y: 50, label: "STEM", targetX: 50, targetY: 50 },
+        { id: "roots", x: 80, y: 85, label: "ROOTS", targetX: 50, targetY: 85 },
+      ],
+      labels: ["FLOWER", "LEAF", "STEM", "ROOTS"],
     },
     {
       id: 4,
-      character: "3",
-      name: "Number Three",
-      difficulty: "easy",
-      type: "number",
-      strokes: [
-        {
-          id: 1,
-          path: "M 20 20 Q 40 10, 60 20 Q 70 30, 60 40 Q 70 50, 60 60 Q 40 70, 20 60",
-          startPoint: { x: 20, y: 20 },
-          endPoint: { x: 20, y: 60 }
-        }
-      ]
+      name: "Car Parts",
+      difficulty: "medium",
+      title: "Parts of a Car",
+      image: "/simple-car-clean.jpg",
+      labelPositions: [
+        { id: "windshield", x: 15, y: 25, label: "WINDSHIELD", targetX: 36.4, targetY: 47 },
+        { id: "hood", x: 10, y: 35, label: "HOOD", targetX: 19.1, targetY: 53.3 },
+        { id: "door", x: 80, y: 45, label: "DOOR", targetX: 43.8, targetY: 58.6 },
+        { id: "wheel", x: 10, y: 70, label: "WHEEL", targetX: 20.5, targetY: 65.5 },
+        { id: "trunk", x: 90, y: 40, label: "TRUNK", targetX: 90.7, targetY: 52.7 },
+        { id: "headlight", x: 5, y: 50, label: "HEADLIGHT", targetX: 9, targetY: 57.6 },
+      ],
+      labels: ["WINDSHIELD", "HOOD", "DOOR", "WHEEL", "TRUNK", "HEADLIGHT"],
     },
+  ],
+  tracingItems: [
     {
-      id: 5,
-      character: "4",
-      name: "Number Four",
-      difficulty: "easy",
-      type: "number",
-      strokes: [
-        {
-          id: 1,
-          path: "M 60 10 L 60 90",
-          startPoint: { x: 60, y: 10 },
-          endPoint: { x: 60, y: 90 }
-        },
-        {
-          id: 2,
-          path: "M 60 10 L 20 60 L 80 60",
-          startPoint: { x: 60, y: 10 },
-          endPoint: { x: 80, y: 60 }
-        }
-      ]
-    },
-    {
-      id: 6,
-      character: "5",
-      name: "Number Five",
-      difficulty: "easy",
-      type: "number",
-      strokes: [
-        {
-          id: 1,
-          path: "M 70 10 L 20 10 L 20 50 Q 40 40, 60 50 Q 80 60, 60 80 Q 40 90, 20 80",
-          startPoint: { x: 70, y: 10 },
-          endPoint: { x: 20, y: 80 }
-        }
-      ]
-    },
-    // Letters A-F
-    {
-      id: 11,
+      id: 1,
       character: "A",
       name: "Letter A",
-      difficulty: "medium",
+      difficulty: "easy",
       type: "letter",
       strokes: [
         {
           id: 1,
-          path: "M 20 90 L 50 10 L 80 90",
-          startPoint: { x: 20, y: 90 },
-          endPoint: { x: 80, y: 90 }
-        },
-        {
-          id: 2,
-          path: "M 30 65 L 70 65",
-          startPoint: { x: 30, y: 65 },
-          endPoint: { x: 70, y: 65 }
-        }
-      ]
-    },
-    {
-      id: 12,
-      character: "B",
-      name: "Letter B",
-      difficulty: "medium",
-      type: "letter",
-      strokes: [
-        {
-          id: 1,
-          path: "M 20 10 L 20 90 L 60 90 Q 80 90, 80 70 Q 80 50, 60 50 L 20 50",
-          startPoint: { x: 20, y: 10 },
-          endPoint: { x: 20, y: 50 }
-        },
-        {
-          id: 2,
-          path: "M 20 10 L 60 10 Q 80 10, 80 30 Q 80 50, 60 50",
-          startPoint: { x: 20, y: 10 },
-          endPoint: { x: 60, y: 50 }
-        }
-      ]
-    },
-    {
-      id: 13,
-      character: "C",
-      name: "Letter C",
-      difficulty: "medium",
-      type: "letter",
-      strokes: [
-        {
-          id: 1,
-          path: "M 80 20 Q 60 10, 40 10 Q 20 10, 20 50 Q 20 90, 40 90 Q 60 90, 80 80",
-          startPoint: { x: 80, y: 20 },
-          endPoint: { x: 80, y: 80 }
-        }
-      ]
-    },
-    {
-      id: 14,
-      character: "D",
-      name: "Letter D",
-      difficulty: "medium",
-      type: "letter",
-      strokes: [
-        {
-          id: 1,
-          path: "M 20 10 L 20 90 L 60 90 Q 80 90, 80 50 Q 80 10, 60 10 L 20 10",
-          startPoint: { x: 20, y: 10 },
-          endPoint: { x: 20, y: 10 }
-        }
-      ]
-    },
-    {
-      id: 15,
-      character: "E",
-      name: "Letter E",
-      difficulty: "medium",
-      type: "letter",
-      strokes: [
-        {
-          id: 1,
-          path: "M 20 10 L 20 90 L 80 90",
-          startPoint: { x: 20, y: 10 },
-          endPoint: { x: 80, y: 90 }
-        },
-        {
-          id: 2,
-          path: "M 20 10 L 70 10",
-          startPoint: { x: 20, y: 10 },
-          endPoint: { x: 70, y: 10 }
-        },
-        {
-          id: 3,
-          path: "M 20 50 L 60 50",
-          startPoint: { x: 20, y: 50 },
-          endPoint: { x: 60, y: 50 }
-        }
-      ]
-    },
-    {
-      id: 16,
-      character: "F",
-      name: "Letter F",
-      difficulty: "hard",
-      type: "letter",
-      strokes: [
-        {
-          id: 1,
-          path: "M 20 10 L 20 90",
-          startPoint: { x: 20, y: 10 },
-          endPoint: { x: 20, y: 90 }
-        },
-        {
-          id: 2,
-          path: "M 20 10 L 70 10",
-          startPoint: { x: 20, y: 10 },
-          endPoint: { x: 70, y: 10 }
-        },
-        {
-          id: 3,
-          path: "M 20 50 L 60 50",
-          startPoint: { x: 20, y: 50 },
-          endPoint: { x: 60, y: 50 }
+          path: "M 50 100 L 100 50 L 150 100",
+          startPoint: { x: 50, y: 100 },
+          endPoint: { x: 150, y: 100 }
         }
       ]
     }

@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react"
 
-const TracingGame = lazy(() => import("./TracingGame").then((mod) => ({ default: mod.TracingGame })))
+const NumberPatternGame = lazy(() => import("./NumberPatternGame").then((mod) => ({ default: mod.NumberPatternGame })))
 
 export default function GameWrapper() {
   return (
@@ -10,7 +10,7 @@ export default function GameWrapper() {
           <div className="text-xl text-black">Loading game...</div>
         </div>
       }>
-        <TracingGame />
+        <NumberPatternGame />
       </Suspense>
     </div>
   )
